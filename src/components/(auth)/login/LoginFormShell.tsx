@@ -2,7 +2,7 @@
 
 import type { SubmitHandler, UseFormReturn } from 'react-hook-form'
 
-import type { LoginFormValues } from '@/hooks/useLoginForm'
+import type { LoginFormValues } from '@/components/(auth)/login/hook/useLoginForm'
 
 import AppleSignInButton from './AppleSignInButton'
 import EmailInput from './EmailInput'

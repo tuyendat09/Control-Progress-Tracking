@@ -4,6 +4,8 @@ import './globals.css'
 
 import { QueryProvider } from '@/providers/query-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
+import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister'
+import { InstallBanner } from '@/components/pwa/InstallBanner'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -26,10 +28,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="flex min-h-full flex-col">
         <ThemeProvider>
-          <QueryProvider>{children}</QueryProvider>
+          <QueryProvider>
+            <InstallBanner />
+            <ServiceWorkerRegister />
+            {children}
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

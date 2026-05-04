@@ -1,6 +1,6 @@
 'use client'
 
-import { useLoginForm } from '@/hooks/useLoginForm'
+import { useLoginForm } from '@/components/(auth)/login/hook/useLoginForm'
 
 import LoginFormShell from './LoginFormShell'
 
