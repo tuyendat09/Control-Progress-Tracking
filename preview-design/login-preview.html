@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Control — Login Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --primary: #0066cc;
+    --ink: #1d1d1f;
+    --muted: #7a7a7a;
+    --parchment: #f5f5f7;
+    --surface-dark: #272729;
+    --hairline: #e0e0e0;
+  }
+
+  body {
+    background: #f5f5f5;
+    font-family: 'Inter', system-ui, sans-serif;
+    padding: 60px 40px;
+    min-height: 100vh;
+  }
+
+  .preview-stack {
+    max-width: 1700px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .preview-row {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+  }
+
+  .preview-caption {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+  .preview-caption strong {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  /* ============================================================
+     MOBILE — iPhone 16 shell
+     ============================================================ */
+  .phone-wrap { position: relative; }
+
+  .phone {
+    width: 393px;
+    height: 852px;
+    background: #ffffff;
+    border-radius: 54px;
+    box-shadow:
+      0 0 0 10px #1d1d1f,
+      0 0 0 12px #3a3a3c,
+      0 40px 80px rgba(0,0,0,0.35);
+    overflow: hidden;
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  /* Dynamic Island */
+  .dynamic-island {
+    position: absolute;
+    top: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 34px;
+    background: #000;
+    border-radius: 20px;
+    z-index: 10;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    padding: 88px 24px 0;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* App Icon (mobile) */
+  .app-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 18px;
+    margin: 0 auto 16px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .app-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* App Name */
+  .app-name {
+    font-size: 34px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.374px;
+    line-height: 1.10;
+    text-align: center;
+  }
+
+  /* Tagline */
+  .tagline {
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.374px;
+    line-height: 1.47;
+    text-align: center;
+    margin-top: 8px;
+  }
+
+  /* Welcome */
+  .welcome-block {
+    margin-top: 48px;
+  }
+  .welcome {
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.374px;
+    line-height: 1.14;
+  }
+  .welcome-sub {
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.374px;
+    line-height: 1.47;
+    margin-top: 6px;
+  }
+
+  /* Inputs */
+  .inputs {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .input-field {
+    width: 100%;
+    height: 52px;
+    background: var(--parchment);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 0 20px;
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.374px;
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Forgot */
+  .forgot {
+    margin-top: 12px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--primary);
+    letter-spacing: -0.224px;
+  }
+
+  /* Sign In */
+  .btn-primary {
+    margin-top: 24px;
+    width: 100%;
+    height: 52px;
+    background: var(--primary);
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.374px;
+  }
+
+  /* Divider */
+  .divider {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .divider-text {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.224px;
+  }
+
+  /* Apple button */
+  .btn-apple {
+    margin-top: 16px;
+    width: 100%;
+    height: 52px;
+    background: var(--surface-dark);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.374px;
+  }
+  .apple-icon {
+    font-size: 20px;
+    line-height: 1;
+    margin-top: -2px;
+  }
+
+  /* Footer */
+  .footer {
+    position: absolute;
+    bottom: 40px;
+    left: 0; right: 0;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.224px;
+  }
+  .footer span {
+    font-weight: 600;
+    color: var(--primary);
+  }
+
+  /* Side label (mobile annotations) */
+  .label {
+    position: absolute;
+    right: -200px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 180px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .label-item {
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .label-item strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 2px;
+  }
+
+  /* ============================================================
+     DESKTOP — Browser mockup
+     ============================================================ */
+  .browser-wrap {
+    position: relative;
+    width: 1280px;
+    max-width: 100%;
+  }
+
+  .browser {
+    width: 100%;
+    height: 800px;
+    background: #ffffff;
+    border-radius: 14px;
+    overflow: hidden;
+    box-shadow:
+      0 0 0 1px rgba(0,0,0,0.08),
+      0 20px 50px rgba(0,0,0,0.10);
+  }
+
+  .browser-chrome {
+    height: 44px;
+    background: #f5f5f7;
+    border-bottom: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+  }
+
+  .traffic-lights {
+    display: flex;
+    gap: 8px;
+  }
+  .traffic-light {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .traffic-light.red    { background: #ff5f57; }
+  .traffic-light.yellow { background: #febc2e; }
+  .traffic-light.green  { background: #28c840; }
+
+  .url-bar {
+    flex: 1;
+    max-width: 480px;
+    margin: 0 auto;
+    height: 28px;
+    background: #ffffff;
+    border: 1px solid var(--hairline);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 12px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .url-bar svg {
+    flex-shrink: 0;
+  }
+
+  .browser-body {
+    height: calc(800px - 44px);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* Left brand panel */
+  .brand-panel {
+    background: #1d1d1f;
+    color: #fff;
+    padding: 80px 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .brand-top {
+    position: relative;
+    z-index: 1;
+  }
+
+  .brand-icon {
+    width: 128px;
+    height: 128px;
+    border-radius: 32px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+  .brand-icon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .brand-name {
+    font-size: 48px;
+    font-weight: 600;
+    letter-spacing: -1px;
+    line-height: 1.05;
+    color: #ffffff;
+  }
+
+  .brand-tagline {
+    font-size: 20px;
+    font-weight: 400;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: -0.4px;
+    margin-top: 14px;
+    max-width: 380px;
+    line-height: 1.45;
+  }
+
+  .brand-features {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .feature {
+    color: rgba(255,255,255,0.85);
+    font-size: 15px;
+    letter-spacing: -0.2px;
+    padding-left: 16px;
+    border-left: 2px solid rgba(0,102,204,0.4);
+  }
+  .feature strong {
+    display: block;
+    color: #fff;
+    font-weight: 600;
+    margin-bottom: 2px;
+    font-size: 15px;
+  }
+  .feature span {
+    color: rgba(255,255,255,0.55);
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  /* Right form panel */
+  .form-panel {
+    background: #ffffff;
+    padding: 80px 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .form-card {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  .form-welcome {
+    font-size: 32px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.6px;
+    line-height: 1.14;
+  }
+  .form-sub {
+    font-size: 17px;
+    font-weight: 400;
+    color: var(--muted);
+    letter-spacing: -0.374px;
+    margin-top: 8px;
+  }
+
+  .form-inputs {
+    margin-top: 36px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: -0.1px;
+  }
+  .form-input {
+    width: 100%;
+    height: 52px;
+    background: var(--parchment);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 0 20px;
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--muted);
+    font-family: inherit;
+    display: flex;
+    align-items: center;
+    transition: border-color 200ms ease, background 200ms ease;
+  }
+  .form-input.filled {
+    color: var(--ink);
+  }
+  .form-input:hover {
+    border-color: #c8c8cd;
+  }
+
+  .form-forgot {
+    margin-top: 14px;
+    text-align: right;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--primary);
+    letter-spacing: -0.224px;
+    cursor: pointer;
+  }
+
+  .form-btn-primary {
+    margin-top: 24px;
+    width: 100%;
+    height: 52px;
+    background: var(--primary);
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    transition: background 200ms ease;
+  }
+  .form-btn-primary:hover { background: #0058b3; }
+
+  .form-divider {
+    margin-top: 28px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .form-divider-line {
+    flex: 1;
+    height: 1px;
+    background: var(--hairline);
+  }
+  .form-divider-text {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+
+  .form-btn-apple {
+    margin-top: 16px;
+    width: 100%;
+    height: 52px;
+    background: var(--surface-dark);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    color: #fff;
+    letter-spacing: -0.2px;
+    cursor: pointer;
+    transition: background 200ms ease;
+  }
+  .form-btn-apple:hover { background: #242426; }
+
+  .form-footer {
+    margin-top: 36px;
+    text-align: center;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .form-footer span {
+    font-weight: 600;
+    color: var(--primary);
+    cursor: pointer;
+  }
+
+  /* Desktop label annotations */
+  .desktop-labels {
+    position: absolute;
+    right: -220px;
+    top: 60px;
+    width: 200px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .desktop-labels .label-item {
+    margin-bottom: 14px;
+    line-height: 1.5;
+  }
+  .desktop-labels .label-item strong {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 3px;
+  }
+
+  /* Hide annotations on smaller viewports to keep preview clean */
+  @media (max-width: 1700px) {
+    .label, .desktop-labels {
+      display: none;
+    }
+  }
+
+  @media (max-width: 1320px) {
+    .browser-wrap {
+      transform: scale(0.85);
+      transform-origin: top center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="preview-stack">
+
+  <!-- =========================================================
+       Section: MOBILE PREVIEW
+       ========================================================= -->
+  <section class="preview-row" aria-label="Mobile preview">
+    <div class="preview-caption">Mobile · <strong>iPhone 16 · 393×852</strong></div>
+
+    <div class="phone-wrap">
+      <!-- Component: LoginScreen (mobile) -->
+      <div class="phone" data-component="LoginScreenMobile">
+        <div class="dynamic-island"></div>
+        <div class="screen">
+
+          <!-- Component: AppIconBadge -->
+          <div class="app-icon" aria-hidden="true">
+            <!-- Inlined: control-icon-dark.svg -->
+            <svg viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="1024" height="1024" rx="230" fill="#1d1d1f"/>
+              <path d="M692 332C647 276 580 242 512 242C372 242 258 356 258 496C258 636 372 750 512 750C580 750 647 716 692 660" stroke="white" stroke-width="72" stroke-linecap="round"/>
+              <circle cx="692" cy="496" r="58" fill="#0066cc"/>
+            </svg>
+          </div>
+
+          <!-- App Name + Tagline -->
+          <div class="app-name">Control</div>
+          <div class="tagline">Track progress. Own your goals.</div>
+
+          <!-- Component: WelcomeHeader -->
+          <div class="welcome-block">
+            <div class="welcome">Welcome back</div>
+            <div class="welcome-sub">Sign in to continue.</div>
+          </div>
+
+          <!-- Component: LoginForm -->
+          <div class="inputs">
+            <div class="input-field">Email address</div>
+            <div class="input-field">Password</div>
+          </div>
+
+          <div class="forgot">Forgot password?</div>
+
+          <div class="btn-primary">Sign In</div>
+
+          <div class="divider">
+            <div class="divider-line"></div>
+            <div class="divider-text">or</div>
+            <div class="divider-line"></div>
+          </div>
+
+          <!-- Component: AppleSignInButton -->
+          <div class="btn-apple">
+            <span class="apple-icon"></span>
+            Continue with Apple
+          </div>
+
+          <!-- Component: SignUpFooter -->
+          <div class="footer">
+            Don't have an account? <span>Sign up</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Token annotations (mobile) -->
+      <aside class="label" aria-hidden="true">
+        <div class="label-item">
+          <strong>App icon</strong>
+          ink #1d1d1f · radius 18 · 64×64
+        </div>
+        <div class="label-item">
+          <strong>App name</strong>
+          display-md · 34/600
+        </div>
+        <div class="label-item">
+          <strong>Tagline</strong>
+          body · 17/400 · muted
+        </div>
+        <div class="label-item">
+          <strong>Welcome</strong>
+          lead · 28/600
+        </div>
+        <div class="label-item">
+          <strong>Inputs</strong>
+          parchment bg · hairline border · radius 14 · h52
+        </div>
+        <div class="label-item">
+          <strong>Sign In</strong>
+          primary #0066cc · pill · 17/500
+        </div>
+        <div class="label-item">
+          <strong>Apple btn</strong>
+          surface-dark #272729 · radius 14
+        </div>
+        <div class="label-item">
+          <strong>Sign up link</strong>
+          primary #0066cc · 14/600
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- =========================================================
+       Section: DESKTOP PREVIEW
+       ========================================================= -->
+  <section class="preview-row" aria-label="Desktop preview">
+    <div class="preview-caption">Desktop · <strong>Browser · 1280×800</strong></div>
+
+    <div class="browser-wrap">
+      <!-- Component: LoginScreen (desktop) -->
+      <div class="browser" data-component="LoginScreenDesktop">
+
+        <!-- Browser chrome -->
+        <div class="browser-chrome">
+          <div class="traffic-lights">
+            <div class="traffic-light red"></div>
+            <div class="traffic-light yellow"></div>
+            <div class="traffic-light green"></div>
+          </div>
+          <div class="url-bar">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            control.app/login
+          </div>
+          <div style="width: 60px;"></div>
+        </div>
+
+        <!-- Two-column body -->
+        <div class="browser-body">
+
+          <!-- Left: Brand panel -->
+          <!-- Component: BrandPanel -->
+          <div class="brand-panel">
+            <div class="brand-top">
+              <div class="brand-icon" aria-hidden="true">
+                <!-- Inlined: control-icon-dark.svg -->
+                <svg viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <rect width="1024" height="1024" rx="230" fill="#1d1d1f"/>
+                  <path d="M692 332C647 276 580 242 512 242C372 242 258 356 258 496C258 636 372 750 512 750C580 750 647 716 692 660" stroke="white" stroke-width="72" stroke-linecap="round"/>
+                  <circle cx="692" cy="496" r="58" fill="#0066cc"/>
+                </svg>
+              </div>
+              <h1 class="brand-name">Control</h1>
+              <p class="brand-tagline">Track progress. Own your goals.</p>
+            </div>
+
+            <div class="brand-features">
+              <div class="feature">
+                <strong>Daily focus, made simple</strong>
+                <span>Pick three things that matter. Ignore everything else.</span>
+              </div>
+              <div class="feature">
+                <strong>Progress you can see</strong>
+                <span>Streaks, charts, and weekly reviews — without the noise.</span>
+              </div>
+              <div class="feature">
+                <strong>Yours, end-to-end</strong>
+                <span>Encrypted by default. Your goals stay on your devices.</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Form panel -->
+          <!-- Component: LoginFormPanel -->
+          <div class="form-panel">
+            <div class="form-card" data-component="LoginForm">
+
+              <h2 class="form-welcome">Welcome back</h2>
+              <p class="form-sub">Sign in to continue.</p>
+
+              <div class="form-inputs">
+                <div class="form-field">
+                  <label class="form-label" for="email-d">Email</label>
+                  <div class="form-input filled" id="email-d">jane@control.app</div>
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="password-d">Password</label>
+                  <div class="form-input">Enter your password</div>
+                </div>
+              </div>
+
+              <div class="form-forgot">Forgot password?</div>
+
+              <div class="form-btn-primary">Sign In</div>
+
+              <div class="form-divider">
+                <div class="form-divider-line"></div>
+                <div class="form-divider-text">or</div>
+                <div class="form-divider-line"></div>
+              </div>
+
+              <div class="form-btn-apple">
+                <span class="apple-icon"></span>
+                Continue with Apple
+              </div>
+
+              <div class="form-footer">
+                Don't have an account? <span>Sign up</span>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Token annotations (desktop) -->
+      <aside class="desktop-labels" aria-hidden="true">
+        <div class="label-item">
+          <strong>Layout</strong>
+          50/50 split · 1280×800
+        </div>
+        <div class="label-item">
+          <strong>Brand panel</strong>
+          ink #1d1d1f · flat
+        </div>
+        <div class="label-item">
+          <strong>Brand icon</strong>
+          128×128 · radius 32
+        </div>
+        <div class="label-item">
+          <strong>Brand name</strong>
+          48/600 · -1px tracking
+        </div>
+        <div class="label-item">
+          <strong>Form card</strong>
+          max-w 400 · centered
+        </div>
+        <div class="label-item">
+          <strong>Form labels</strong>
+          13/500 · ink
+        </div>
+        <div class="label-item">
+          <strong>Inputs</strong>
+          parchment · radius 14 · h52
+        </div>
+        <div class="label-item">
+          <strong>Sign In</strong>
+          primary · pill · hover -8% L
+        </div>
+        <div class="label-item">
+          <strong>Apple btn</strong>
+          surface-dark · radius 14
+        </div>
+      </aside>
+    </div>
+  </section>
+
+</div>
+
+</body>
+</html>
