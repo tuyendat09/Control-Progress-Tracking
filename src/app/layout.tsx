@@ -42,8 +42,8 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <GradientBackground />
-            {/* <InstallBanner />
-            <ServiceWorkerRegister /> */}
+            <InstallBanner />
+            <ServiceWorkerRegister />
             {children}
             <ThemeToggle />
           </QueryProvider>
