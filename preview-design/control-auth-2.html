@@ -1,0 +1,522 @@
+
+<!doctype html>
+<html lang="en">
+<head><script>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control">
+  <link rel="manifest" href="manifest.json">
+  <title>Control</title>
+  <style>
+    :root {
+      --bg:      #161616;
+      --card:    #2a2a2c;
+      --field:   #1c1c1e;
+      --border:  #3a3a3c;
+      --muted:   #8e8e93;
+      --blue:    #2997ff;
+      --ease:    cubic-bezier(0.4, 0, 0.2, 1);
+      --fd:      'SF Pro Display', system-ui, -apple-system, sans-serif;
+      --fb:      'SF Pro Text', system-ui, -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { background: #000; height: 100%; }
+
+    body {
+      height: 100%;
+      font-family: var(--fb);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Landing ───────────────────────────────────────── */
+    #sc-land {
+      background: #000;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+    }
+    #sc-land.away {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+
+    .hero {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 32px;
+    }
+
+    .hero-text {
+      font-family: var(--fd);
+      font-size: clamp(32px, 9vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      text-align: center;
+      line-height: 1.2;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 0.82em;
+      background: #fff;
+      vertical-align: middle;
+      border-radius: 1px;
+      margin-left: 1px;
+      animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .sheet {
+      background: var(--card);
+      border-radius: 20px 20px 0 0;
+      padding: 16px 20px;
+      padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* ─── Buttons ───────────────────────────────────────── */
+    .btn {
+      width: 100%;
+      min-height: 52px;
+      border: none;
+      font-family: var(--fb);
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: -0.374px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      transition: transform 0.12s var(--ease), opacity 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.82; }
+
+    .btn-solid-w { background: #fff; color: #000; border-radius: 14px; }
+    .btn-dark    { background: var(--field); color: #fff; border: 1px solid var(--border); border-radius: 14px; }
+    .btn-pill-w  { background: #fff; color: #000; border-radius: 9999px; font-weight: 500; }
+    .btn-outline { background: transparent; color: #fff; border: 1px solid var(--border); border-radius: 14px; }
+
+    .g-svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ─── Auth screen ───────────────────────────────────── */
+    #sc-auth {
+      background: var(--bg);
+      transform: translateY(100%);
+      transition: transform 0.42s var(--ease);
+      pointer-events: none;
+    }
+    #sc-auth.open {
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .auth-top {
+      padding-top: max(54px, env(safe-area-inset-top, 0px));
+      padding-left: 20px;
+      padding-right: 20px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn:active { opacity: 0.6; }
+
+    .auth-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 32px 24px;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .auth-h1 {
+      font-family: var(--fd);
+      font-size: 34px;
+      font-weight: 600;
+      letter-spacing: -0.374px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .auth-desc {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 28px;
+    }
+
+    /* ─── Float-label field ─────────────────────────────── */
+    .ff { position: relative; margin-bottom: 12px; }
+
+    .ff input {
+      display: block;
+      width: 100%;
+      height: 56px;
+      background: var(--field);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 48px 8px 16px;
+      font-family: var(--fb);
+      font-size: 17px;
+      letter-spacing: -0.374px;
+      color: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      caret-color: var(--blue);
+      transition: border-color 0.15s;
+    }
+    .ff input:focus { border-color: var(--blue); }
+    .ff input:-webkit-autofill {
+      -webkit-text-fill-color: #fff;
+      box-shadow: 0 0 0 100px var(--field) inset;
+    }
+
+    .ff label {
+      position: absolute;
+      left: 16px;
+      top: 18px;
+      font-family: var(--fb);
+      font-size: 17px;
+      letter-spacing: -0.374px;
+      color: var(--muted);
+      pointer-events: none;
+      transition: top 0.15s var(--ease), font-size 0.15s var(--ease), color 0.15s var(--ease);
+    }
+
+    .ff.active label       { top: 9px; font-size: 11px; letter-spacing: 0; color: var(--blue); }
+    .ff.active.blurred label { color: var(--muted); }
+
+    .ff-action {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-family: var(--fb);
+      font-size: 15px;
+      cursor: pointer;
+      padding: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ─── Frozen email row ──────────────────────────────── */
+    .frozen {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 56px;
+      background: var(--field);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 52px 9px 16px;
+      margin-bottom: 12px;
+    }
+    .frozen .fl { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+    .frozen .fv { font-size: 17px; letter-spacing: -0.374px; display: block; }
+
+    /* ─── Password reveal ───────────────────────────────── */
+    .pw-wrap {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.35s var(--ease), opacity 0.22s 0.08s var(--ease);
+    }
+    .pw-wrap.on { max-height: 80px; opacity: 1; }
+
+    /* ─── Social block ──────────────────────────────────── */
+    .social {
+      overflow: hidden;
+      max-height: 130px;
+      opacity: 1;
+      transition: max-height 0.35s var(--ease), opacity 0.22s var(--ease), margin-top 0.35s var(--ease);
+      margin-top: 4px;
+    }
+    .social.off { max-height: 0; opacity: 0; margin-top: 0; }
+
+    .or-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .or-line::before, .or-line::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .legal {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .legal a { color: var(--muted); text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Screen 1: Landing ──────────────────────────── -->
+<div class="screen" id="sc-land">
+  <div class="hero">
+    <p class="hero-text"><span id="typed"></span><span class="cursor"></span></p>
+  </div>
+  <div class="sheet">
+    <button class="btn btn-solid-w" id="land-google">
+      <svg class="g-svg" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <button class="btn btn-dark" id="land-login">Log In</button>
+    <button class="btn btn-dark" id="land-signup">Sign Up</button>
+  </div>
+</div>
+
+<!-- ─── Screen 2: Auth form ─────────────────────────── -->
+<div class="screen" id="sc-auth">
+  <div class="auth-top">
+    <button class="icon-btn" id="back-btn" aria-label="Back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="auth-scroll">
+    <p class="app-label">Control</p>
+    <h1 class="auth-h1" id="auth-h1">Log in</h1>
+    <p class="auth-desc" id="auth-desc">Track calories. Build streaks.</p>
+
+    <div class="frozen" id="frozen">
+      <span class="fl">Email address</span>
+      <span class="fv" id="frozen-val"></span>
+      <button class="ff-action" id="edit-email">Edit</button>
+    </div>
+
+    <div class="ff" id="email-ff">
+      <input type="email" id="email-in" placeholder=" " autocomplete="email">
+      <label for="email-in">Email address</label>
+    </div>
+
+    <div class="pw-wrap" id="pw-wrap">
+      <div class="ff" id="pw-ff">
+        <input type="password" id="pw-in" placeholder=" " autocomplete="current-password">
+        <label for="pw-in">Password</label>
+        <button class="ff-action" id="pw-toggle">Show</button>
+      </div>
+    </div>
+
+    <button class="btn btn-pill-w" id="continue-btn">Continue</button>
+
+    <div class="social" id="social">
+      <div class="or-line">OR</div>
+      <button class="btn btn-outline" id="auth-google">
+        <svg class="g-svg" viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <p class="legal">
+      <a href="#">Terms of Use</a> &nbsp;·&nbsp; <a href="#">Privacy Policy</a>
+    </p>
+  </div>
+</div>
+
+<script>
+const PHRASES = ["Let's workout", "Earn your goal"];
+let pIdx = 0, cIdx = 0, deleting = false;
+const typedEl = document.getElementById('typed');
+
+(function tick() {
+  const word = PHRASES[pIdx];
+  if (!deleting) {
+    typedEl.textContent = word.slice(0, ++cIdx);
+    if (cIdx === word.length) { deleting = true; return setTimeout(tick, 1900); }
+    setTimeout(tick, 65);
+  } else {
+    typedEl.textContent = word.slice(0, --cIdx);
+    if (!cIdx) { deleting = false; pIdx = (pIdx + 1) % PHRASES.length; return setTimeout(tick, 450); }
+    setTimeout(tick, 38);
+  }
+})();
+
+const land   = document.getElementById('sc-land');
+const authSc = document.getElementById('sc-auth');
+let authMode = 'login';
+
+function openAuth(mode) {
+  authMode = mode;
+  resetAuth();
+  document.getElementById('auth-h1').textContent  = mode === 'signup' ? 'Create account' : 'Log in';
+  document.getElementById('auth-desc').textContent = mode === 'signup' ? 'Start your streak today.' : 'Track calories. Build streaks.';
+  land.classList.add('away');
+  authSc.classList.add('open');
+}
+
+function closeAuth() {
+  authSc.classList.remove('open');
+  setTimeout(() => land.classList.remove('away'), 60);
+  setTimeout(resetAuth, 440);
+}
+
+document.getElementById('land-login').addEventListener('click',  () => openAuth('login'));
+document.getElementById('land-signup').addEventListener('click', () => openAuth('signup'));
+
+let step = 'email';
+const emailFF   = document.getElementById('email-ff');
+const emailIn   = document.getElementById('email-in');
+const frozenEl  = document.getElementById('frozen');
+const frozenVal = document.getElementById('frozen-val');
+const pwWrapEl  = document.getElementById('pw-wrap');
+const socialEl  = document.getElementById('social');
+const authH1El  = document.getElementById('auth-h1');
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  if (step === 'password') backToEmail(); else closeAuth();
+});
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  if (step === 'email') {
+    const v = emailIn.value.trim();
+    if (!v.includes('@')) { emailIn.focus(); return; }
+    goPassword(v);
+  }
+});
+
+function goPassword(email) {
+  step = 'password';
+  frozenVal.textContent = email;
+  emailFF.style.display = 'none';
+  frozenEl.style.display = 'block';
+  socialEl.classList.add('off');
+  authH1El.textContent = authMode === 'signup' ? 'Create a password' : 'Enter password';
+  requestAnimationFrame(() => {
+    pwWrapEl.classList.add('on');
+    setTimeout(() => document.getElementById('pw-in').focus(), 220);
+  });
+}
+
+function backToEmail() {
+  step = 'email';
+  authH1El.textContent = authMode === 'signup' ? 'Create account' : 'Log in';
+  frozenEl.style.display = 'none';
+  emailFF.style.display = '';
+  pwWrapEl.classList.remove('on');
+  socialEl.classList.remove('off');
+}
+
+function resetAuth() {
+  step = 'email';
+  emailIn.value = '';
+  document.getElementById('pw-in').value = '';
+  frozenEl.style.display = 'none';
+  emailFF.style.display = '';
+  pwWrapEl.classList.remove('on');
+  socialEl.classList.remove('off');
+  updateFF(emailIn);
+  updateFF(document.getElementById('pw-in'));
+}
+
+document.getElementById('edit-email').addEventListener('click', backToEmail);
+
+function updateFF(inp) {
+  const ff = inp.closest('.ff');
+  if (!ff) return;
+  const hasVal  = inp.value.length > 0;
+  const focused = document.activeElement === inp;
+  ff.classList.toggle('active',  hasVal || focused);
+  ff.classList.toggle('blurred', hasVal && !focused);
+}
+
+[emailIn, document.getElementById('pw-in')].forEach(inp =>
+  ['input', 'focus', 'blur'].forEach(ev => inp.addEventListener(ev, () => updateFF(inp)))
+);
+
+document.getElementById('pw-toggle').addEventListener('click', () => {
+  const inp = document.getElementById('pw-in');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  document.getElementById('pw-toggle').textContent = show ? 'Hide' : 'Show';
+});
+</script>
+</body>
+</html>

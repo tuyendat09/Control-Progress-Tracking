@@ -6,6 +6,8 @@ import { QueryProvider } from '@/providers/query-provider'
 import { ThemeProvider } from '@/providers/theme-provider'
 import { ServiceWorkerRegister } from '@/components/pwa/ServiceWorkerRegister'
 import { InstallBanner } from '@/components/pwa/InstallBanner'
+import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import GradientBackground from '@/components/ui/GradientBackground'
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -36,12 +38,14 @@ export default function RootLayout({
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </head>
-      <body className="flex min-h-full flex-col">
+      <body>
         <ThemeProvider>
           <QueryProvider>
-            <InstallBanner />
-            <ServiceWorkerRegister />
+            <GradientBackground />
+            {/* <InstallBanner />
+            <ServiceWorkerRegister /> */}
             {children}
+            <ThemeToggle />
           </QueryProvider>
         </ThemeProvider>
       </body>

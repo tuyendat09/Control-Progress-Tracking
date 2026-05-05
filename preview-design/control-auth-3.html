@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="en">
+<head><script>(function(){
+  function makeStore(){
+    var data = {};
+    var api = {
+      getItem: function(k){ return Object.prototype.hasOwnProperty.call(data, k) ? data[k] : null; },
+      setItem: function(k, v){ data[k] = String(v); },
+      removeItem: function(k){ delete data[k]; },
+      clear: function(){ data = {}; },
+      key: function(i){ return Object.keys(data)[i] || null; }
+    };
+    Object.defineProperty(api, 'length', { get: function(){ return Object.keys(data).length; } });
+    return api;
+  }
+  function tryShim(name){
+    var works = false;
+    try { works = !!window[name] && typeof window[name].getItem === 'function'; void window[name].length; }
+    catch (_) { works = false; }
+    if (works) return;
+    try { Object.defineProperty(window, name, { configurable: true, value: makeStore() }); }
+    catch (_) { try { window[name] = makeStore(); } catch (__) {} }
+  }
+  tryShim('localStorage');
+  tryShim('sessionStorage');
+})();</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Control">
+  <link rel="manifest" href="manifest.json">
+  <title>Control</title>
+  <style>
+    :root {
+      --bg:      #161616;
+      --card:    #2a2a2c;
+      --field:   #1c1c1e;
+      --border:  #3a3a3c;
+      --muted:   #8e8e93;
+      --blue:    #2997ff;
+      --ease:    cubic-bezier(0.4, 0, 0.2, 1);
+      --fd:      'SF Pro Display', system-ui, -apple-system, sans-serif;
+      --fb:      'SF Pro Text', system-ui, -apple-system, sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { background: #000; height: 100%; }
+
+    body {
+      height: 100%;
+      font-family: var(--fb);
+      color: #fff;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow: hidden;
+      cursor: none;
+    }
+
+    /* Custom cursor inherits white on dark via fixed color */
+    #cursor-dot, #cursor-ring {
+      position: fixed;
+      pointer-events: none;
+      z-index: 99999;
+      transform: translate(-50%, -50%);
+      border-radius: 50%;
+      transition: opacity 0.3s;
+    }
+    #cursor-dot {
+      width: 5px;
+      height: 5px;
+      background: #fff;
+    }
+    #cursor-ring {
+      width: 36px;
+      height: 36px;
+      border: 1.5px solid #fff;
+      opacity: 0.55;
+      mix-blend-mode: difference;
+    }
+
+    /* Hide cursor on touch devices to avoid stuck dot */
+    @media (hover: none) and (pointer: coarse) {
+      #cursor-dot, #cursor-ring { display: none; }
+      body { cursor: auto; }
+    }
+
+    .screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ─── Landing ───────────────────────────────────────── */
+    #sc-land {
+      background: #000;
+      transition: opacity 0.3s var(--ease), transform 0.3s var(--ease);
+      overflow: hidden;
+    }
+    #sc-land.away {
+      opacity: 0;
+      transform: scale(0.96);
+      pointer-events: none;
+    }
+
+    /* Particle sphere — centered square background */
+    .sphere-stage {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .sphere-stage canvas {
+      display: block;
+      width: min(78vw, 78vh, 560px);
+      height: min(78vw, 78vh, 560px);
+      pointer-events: auto;
+      cursor: none;
+      /* Subtle radial fade so edges blend into background */
+      -webkit-mask-image: radial-gradient(circle at center, #000 60%, rgba(0,0,0,0.6) 80%, transparent 100%);
+              mask-image: radial-gradient(circle at center, #000 60%, rgba(0,0,0,0.6) 80%, transparent 100%);
+    }
+
+    /* Hero text overlays sphere */
+    .hero {
+      position: relative;
+      z-index: 2;
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 32px;
+      pointer-events: none; /* let sphere capture cursor through hero area */
+    }
+
+    .hero-text {
+      font-family: var(--fd);
+      font-size: clamp(32px, 9vw, 40px);
+      font-weight: 600;
+      letter-spacing: -0.4px;
+      text-align: center;
+      line-height: 1.2;
+      /* Soft glow so text stays legible over particles */
+      text-shadow:
+        0 0 24px rgba(0, 0, 0, 0.85),
+        0 0 8px rgba(0, 0, 0, 0.7);
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 0.82em;
+      background: #fff;
+      vertical-align: middle;
+      border-radius: 1px;
+      margin-left: 1px;
+      animation: blink 1s steps(1) infinite;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .sheet {
+      position: relative;
+      z-index: 3;
+      background: var(--card);
+      border-radius: 20px 20px 0 0;
+      padding: 16px 20px;
+      padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      /* Lift the sheet slightly above pure black so the sphere fade reads cleanly */
+      box-shadow: 0 -24px 48px rgba(0, 0, 0, 0.6);
+    }
+
+    /* ─── Buttons ───────────────────────────────────────── */
+    .btn {
+      width: 100%;
+      min-height: 52px;
+      border: none;
+      font-family: var(--fb);
+      font-size: 17px;
+      font-weight: 400;
+      letter-spacing: -0.374px;
+      cursor: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      transition: transform 0.12s var(--ease), opacity 0.12s;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.82; }
+
+    .btn-solid-w { background: #fff; color: #000; border-radius: 14px; }
+    .btn-dark    { background: var(--field); color: #fff; border: 1px solid var(--border); border-radius: 14px; }
+    .btn-pill-w  { background: #fff; color: #000; border-radius: 9999px; font-weight: 500; }
+    .btn-outline { background: transparent; color: #fff; border: 1px solid var(--border); border-radius: 14px; }
+
+    .g-svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ─── Auth screen ───────────────────────────────────── */
+    #sc-auth {
+      background: var(--bg);
+      transform: translateY(100%);
+      transition: transform 0.42s var(--ease);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #sc-auth.open {
+      transform: translateY(0);
+      pointer-events: all;
+    }
+
+    .auth-top {
+      padding-top: max(54px, env(safe-area-inset-top, 0px));
+      padding-left: 20px;
+      padding-right: 20px;
+      flex-shrink: 0;
+    }
+
+    .icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--card);
+      border: none;
+      color: #fff;
+      cursor: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .icon-btn:active { opacity: 0.6; }
+
+    .auth-scroll {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 32px 24px;
+      padding-bottom: calc(32px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .app-label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .auth-h1 {
+      font-family: var(--fd);
+      font-size: 34px;
+      font-weight: 600;
+      letter-spacing: -0.374px;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .auth-desc {
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.4;
+      margin-bottom: 28px;
+    }
+
+    /* ─── Float-label field ─────────────────────────────── */
+    .ff { position: relative; margin-bottom: 12px; }
+
+    .ff input {
+      display: block;
+      width: 100%;
+      height: 56px;
+      background: var(--field);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 48px 8px 16px;
+      font-family: var(--fb);
+      font-size: 17px;
+      letter-spacing: -0.374px;
+      color: #fff;
+      outline: none;
+      -webkit-appearance: none;
+      caret-color: var(--blue);
+      transition: border-color 0.15s;
+      cursor: none;
+    }
+    .ff input:focus { border-color: var(--blue); }
+    .ff input:-webkit-autofill {
+      -webkit-text-fill-color: #fff;
+      box-shadow: 0 0 0 100px var(--field) inset;
+    }
+
+    .ff label {
+      position: absolute;
+      left: 16px;
+      top: 18px;
+      font-family: var(--fb);
+      font-size: 17px;
+      letter-spacing: -0.374px;
+      color: var(--muted);
+      pointer-events: none;
+      transition: top 0.15s var(--ease), font-size 0.15s var(--ease), color 0.15s var(--ease);
+    }
+
+    .ff.active label       { top: 9px; font-size: 11px; letter-spacing: 0; color: var(--blue); }
+    .ff.active.blurred label { color: var(--muted); }
+
+    .ff-action {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--blue);
+      font-family: var(--fb);
+      font-size: 15px;
+      cursor: none;
+      padding: 6px;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ─── Frozen email row ──────────────────────────────── */
+    .frozen {
+      display: none;
+      position: relative;
+      width: 100%;
+      height: 56px;
+      background: var(--field);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 9px 52px 9px 16px;
+      margin-bottom: 12px;
+    }
+    .frozen .fl { font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
+    .frozen .fv { font-size: 17px; letter-spacing: -0.374px; display: block; }
+
+    /* ─── Password reveal ───────────────────────────────── */
+    .pw-wrap {
+      overflow: hidden;
+      max-height: 0;
+      opacity: 0;
+      transition: max-height 0.35s var(--ease), opacity 0.22s 0.08s var(--ease);
+    }
+    .pw-wrap.on { max-height: 80px; opacity: 1; }
+
+    /* ─── Social block ──────────────────────────────────── */
+    .social {
+      overflow: hidden;
+      max-height: 130px;
+      opacity: 1;
+      transition: max-height 0.35s var(--ease), opacity 0.22s var(--ease), margin-top 0.35s var(--ease);
+      margin-top: 4px;
+    }
+    .social.off { max-height: 0; opacity: 0; margin-top: 0; }
+
+    .or-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 16px 0;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .or-line::before, .or-line::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    .legal {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+    .legal a { color: var(--muted); text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Custom cursor ─────────────────────────────────── -->
+<div id="cursor-dot"></div>
+<div id="cursor-ring"></div>
+
+<!-- ─── Screen 1: Landing ──────────────────────────── -->
+<!-- Component: LandingScreen -->
+<div class="screen" id="sc-land">
+
+  <!-- Component: ParticleSphere (background) -->
+  <div class="sphere-stage" aria-hidden="true">
+    <canvas id="sphere-canvas" width="560" height="560"></canvas>
+  </div>
+
+  <!-- Component: HeroTypewriter -->
+  <div class="hero">
+    <p class="hero-text"><span id="typed"></span><span class="cursor"></span></p>
+  </div>
+
+  <!-- Component: AuthBottomSheet -->
+  <div class="sheet">
+    <button class="btn btn-solid-w" id="land-google">
+      <svg class="g-svg" viewBox="0 0 24 24">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+    <button class="btn btn-dark" id="land-login">Log In</button>
+    <button class="btn btn-dark" id="land-signup">Sign Up</button>
+  </div>
+</div>
+
+<!-- ─── Screen 2: Auth form ─────────────────────────── -->
+<!-- Component: AuthScreen -->
+<div class="screen" id="sc-auth">
+  <div class="auth-top">
+    <button class="icon-btn" id="back-btn" aria-label="Back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="auth-scroll">
+    <p class="app-label">Control</p>
+    <h1 class="auth-h1" id="auth-h1">Log in</h1>
+    <p class="auth-desc" id="auth-desc">Track calories. Build streaks.</p>
+
+    <div class="frozen" id="frozen">
+      <span class="fl">Email address</span>
+      <span class="fv" id="frozen-val"></span>
+      <button class="ff-action" id="edit-email">Edit</button>
+    </div>
+
+    <div class="ff" id="email-ff">
+      <input type="email" id="email-in" placeholder=" " autocomplete="email">
+      <label for="email-in">Email address</label>
+    </div>
+
+    <div class="pw-wrap" id="pw-wrap">
+      <div class="ff" id="pw-ff">
+        <input type="password" id="pw-in" placeholder=" " autocomplete="current-password">
+        <label for="pw-in">Password</label>
+        <button class="ff-action" id="pw-toggle">Show</button>
+      </div>
+    </div>
+
+    <button class="btn btn-pill-w" id="continue-btn">Continue</button>
+
+    <div class="social" id="social">
+      <div class="or-line">OR</div>
+      <button class="btn btn-outline" id="auth-google">
+        <svg class="g-svg" viewBox="0 0 24 24">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+    </div>
+
+    <p class="legal">
+      <a href="#">Terms of Use</a> &nbsp;·&nbsp; <a href="#">Privacy Policy</a>
+    </p>
+  </div>
+</div>
+
+<script>
+/* ───────────────────────────────────────────────────────
+   Custom cursor (dot + lagging ring)
+   ─────────────────────────────────────────────────────── */
+(function(){
+  const dot  = document.getElementById('cursor-dot');
+  const ring = document.getElementById('cursor-ring');
+
+  let mx = -200, my = -200;
+  let rx = -200, ry = -200;
+  const LERP = 0.18;
+  let active = false;
+
+  function lerp(a, b, t){ return a + (b - a) * t; }
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    if (!active) { rx = mx; ry = my; active = true; }
+    dot.style.left = mx + 'px';
+    dot.style.top  = my + 'px';
+  });
+
+  document.addEventListener('mouseleave', () => {
+    dot.style.opacity = '0';
+    ring.style.opacity = '0';
+  });
+  document.addEventListener('mouseenter', () => {
+    dot.style.opacity = '1';
+    ring.style.opacity = '0.55';
+  });
+
+  function tick() {
+    rx = lerp(rx, mx, LERP);
+    ry = lerp(ry, my, LERP);
+    ring.style.left = rx + 'px';
+    ring.style.top  = ry + 'px';
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+
+/* ───────────────────────────────────────────────────────
+   Particle Sphere (canvas, 2200 particles, depth-sorted)
+   ─────────────────────────────────────────────────────── */
+(function(){
+  const canvas = document.getElementById('sphere-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = 560, H = 560;
+  canvas.width = W; canvas.height = H;
+
+  const TOTAL = 2200, RADIUS = 170;
+  const CX = W/2, CY = H/2;
+
+  let mouseX = -9999, mouseY = -9999;
+  let isHovering = false;
+  const REPEL_RADIUS = 95, REPEL_FORCE = 5.5;
+
+  const particles = [];
+
+  function randomSpherePoint() {
+    const u = Math.random(), v = Math.random();
+    const theta = 2 * Math.PI * u;
+    const phi = Math.acos(2 * v - 1);
+    return {
+      ox: Math.sin(phi)*Math.cos(theta),
+      oy: Math.sin(phi)*Math.sin(theta),
+      oz: Math.cos(phi)
+    };
+  }
+
+  for (let i = 0; i < TOTAL; i++) {
+    const p = randomSpherePoint();
+    particles.push({
+      ...p,
+      vx: 0, vy: 0,
+      size: Math.random()*1.4 + 0.4,
+      brightness: Math.random()*0.5 + 0.5
+    });
+  }
+
+  let angle = 0;
+
+  function project(x, y, z) {
+    const fov = 420, scale = fov / (fov + z * RADIUS);
+    return { sx: CX + x*RADIUS*scale, sy: CY + y*RADIUS*scale, scale };
+  }
+  function rotateY(x, y, z, a) {
+    const cos = Math.cos(a), sin = Math.sin(a);
+    return { rx: x*cos + z*sin, ry: y, rz: -x*sin + z*cos };
+  }
+
+  function render() {
+    ctx.clearRect(0, 0, W, H);
+    angle += 0.0045;
+
+    const sorted = particles.map(p => {
+      const r = rotateY(p.ox, p.oy, p.oz, angle);
+      let px = CX + r.rx * RADIUS;
+      let py = CY + r.ry * RADIUS;
+      let vx = p.vx, vy = p.vy;
+
+      if (isHovering) {
+        const dx = px - mouseX, dy = py - mouseY;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < REPEL_RADIUS && dist > 0.1) {
+          const force = (1 - dist/REPEL_RADIUS) * REPEL_FORCE;
+          vx += (dx/dist)*force;
+          vy += (dy/dist)*force;
+        }
+      }
+      vx *= 0.85; vy *= 0.85;
+      p.vx = vx; p.vy = vy;
+      px += vx; py += vy;
+
+      const proj = project(r.rx, r.ry, r.rz);
+      const depth = (r.rz + 1) / 2;
+      return { px, py, depth, size: p.size, brightness: p.brightness, proj };
+    });
+
+    sorted.sort((a, b) => a.depth - b.depth);
+
+    // Always render in dark-mode palette since the page is dark themed
+    for (const p of sorted) {
+      const alpha = (0.3 + p.depth*0.7) * p.brightness;
+      const size = p.size * (0.5 + p.depth*0.8) * p.proj.scale;
+      ctx.fillStyle = `rgba(180,200,255,${alpha})`;
+      ctx.beginPath();
+      ctx.arc(p.px, p.py, Math.max(0.3, size), 0, Math.PI*2);
+      ctx.fill();
+    }
+
+    requestAnimationFrame(render);
+  }
+
+  function mapPointer(e) {
+    const rect = canvas.getBoundingClientRect();
+    mouseX = (e.clientX - rect.left) * (W / rect.width);
+    mouseY = (e.clientY - rect.top)  * (H / rect.height);
+    isHovering = true;
+  }
+
+  canvas.addEventListener('mousemove', mapPointer);
+  canvas.addEventListener('mouseleave', () => {
+    isHovering = false;
+    mouseX = -9999; mouseY = -9999;
+  });
+  // Touch support
+  canvas.addEventListener('touchmove', e => {
+    if (e.touches.length) mapPointer(e.touches[0]);
+  }, { passive: true });
+  canvas.addEventListener('touchend', () => {
+    isHovering = false;
+    mouseX = -9999; mouseY = -9999;
+  });
+
+  render();
+})();
+
+/* ───────────────────────────────────────────────────────
+   Typewriter hero
+   ─────────────────────────────────────────────────────── */
+const PHRASES = ["Let's workout", "Earn your goal"];
+let pIdx = 0, cIdx = 0, deleting = false;
+const typedEl = document.getElementById('typed');
+
+(function tick() {
+  const word = PHRASES[pIdx];
+  if (!deleting) {
+    typedEl.textContent = word.slice(0, ++cIdx);
+    if (cIdx === word.length) { deleting = true; return setTimeout(tick, 1900); }
+    setTimeout(tick, 65);
+  } else {
+    typedEl.textContent = word.slice(0, --cIdx);
+    if (!cIdx) { deleting = false; pIdx = (pIdx + 1) % PHRASES.length; return setTimeout(tick, 450); }
+    setTimeout(tick, 38);
+  }
+})();
+
+/* ───────────────────────────────────────────────────────
+   Auth flow (landing → slide-up auth → email → password)
+   ─────────────────────────────────────────────────────── */
+const land   = document.getElementById('sc-land');
+const authSc = document.getElementById('sc-auth');
+let authMode = 'login';
+
+function openAuth(mode) {
+  authMode = mode;
+  resetAuth();
+  document.getElementById('auth-h1').textContent  = mode === 'signup' ? 'Create account' : 'Log in';
+  document.getElementById('auth-desc').textContent = mode === 'signup' ? 'Start your streak today.' : 'Track calories. Build streaks.';
+  land.classList.add('away');
+  authSc.classList.add('open');
+}
+
+function closeAuth() {
+  authSc.classList.remove('open');
+  setTimeout(() => land.classList.remove('away'), 60);
+  setTimeout(resetAuth, 440);
+}
+
+document.getElementById('land-login').addEventListener('click',  () => openAuth('login'));
+document.getElementById('land-signup').addEventListener('click', () => openAuth('signup'));
+
+let step = 'email';
+const emailFF   = document.getElementById('email-ff');
+const emailIn   = document.getElementById('email-in');
+const frozenEl  = document.getElementById('frozen');
+const frozenVal = document.getElementById('frozen-val');
+const pwWrapEl  = document.getElementById('pw-wrap');
+const socialEl  = document.getElementById('social');
+const authH1El  = document.getElementById('auth-h1');
+
+document.getElementById('back-btn').addEventListener('click', () => {
+  if (step === 'password') backToEmail(); else closeAuth();
+});
+
+document.getElementById('continue-btn').addEventListener('click', () => {
+  if (step === 'email') {
+    const v = emailIn.value.trim();
+    if (!v.includes('@')) { emailIn.focus(); return; }
+    goPassword(v);
+  }
+});
+
+function goPassword(email) {
+  step = 'password';
+  frozenVal.textContent = email;
+  emailFF.style.display = 'none';
+  frozenEl.style.display = 'block';
+  socialEl.classList.add('off');
+  authH1El.textContent = authMode === 'signup' ? 'Create a password' : 'Enter password';
+  requestAnimationFrame(() => {
+    pwWrapEl.classList.add('on');
+    setTimeout(() => document.getElementById('pw-in').focus(), 220);
+  });
+}
+
+function backToEmail() {
+  step = 'email';
+  authH1El.textContent = authMode === 'signup' ? 'Create account' : 'Log in';
+  frozenEl.style.display = 'none';
+  emailFF.style.display = '';
+  pwWrapEl.classList.remove('on');
+  socialEl.classList.remove('off');
+}
+
+function resetAuth() {
+  step = 'email';
+  emailIn.value = '';
+  document.getElementById('pw-in').value = '';
+  frozenEl.style.display = 'none';
+  emailFF.style.display = '';
+  pwWrapEl.classList.remove('on');
+  socialEl.classList.remove('off');
+  updateFF(emailIn);
+  updateFF(document.getElementById('pw-in'));
+}
+
+document.getElementById('edit-email').addEventListener('click', backToEmail);
+
+function updateFF(inp) {
+  const ff = inp.closest('.ff');
+  if (!ff) return;
+  const hasVal  = inp.value.length > 0;
+  const focused = document.activeElement === inp;
+  ff.classList.toggle('active',  hasVal || focused);
+  ff.classList.toggle('blurred', hasVal && !focused);
+}
+
+[emailIn, document.getElementById('pw-in')].forEach(inp =>
+  ['input', 'focus', 'blur'].forEach(ev => inp.addEventListener(ev, () => updateFF(inp)))
+);
+
+document.getElementById('pw-toggle').addEventListener('click', () => {
+  const inp = document.getElementById('pw-in');
+  const show = inp.type === 'password';
+  inp.type = show ? 'text' : 'password';
+  document.getElementById('pw-toggle').textContent = show ? 'Hide' : 'Show';
+});
+</script>
+</body>
+</html>
