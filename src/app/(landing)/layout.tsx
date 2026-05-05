@@ -1,4 +1,10 @@
-export default function LandingLayout({ children }) {
+import { ReactNode } from 'react'
+
+interface LandingLayoutProps {
+  children: ReactNode
+}
+
+export default function LandingLayout({ children }: LandingLayoutProps) {
   return (
     <>
       <p>Header nè</p>

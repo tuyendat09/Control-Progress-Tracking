@@ -1,0 +1,1 @@
+- [Project commit and structure conventions](project_conventions.md) — commit style, three-layer component structure, token location, bun as package manager, package-lock.json exclusion
